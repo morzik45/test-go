@@ -1,0 +1,25 @@
+POST http://localhost:8000/add HTTP/1.1
+content-type: application/json
+# @name SingUp
+
+{
+    "username": "morzik",
+    "password": "123456"
+}
+
+###
+POST http://localhost:8000 HTTP/1.1
+content-type: application/json
+# @name SingIn
+
+{
+    "username": "morzik",
+    "password": "123456"
+}
+
+###
+PUT http://localhost:8000 HTTP/1.1
+content-type: application/json
+# @name SingOut
+
+{}
