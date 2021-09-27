@@ -1,13 +1,19 @@
 run:
-	go run ./cmd/main.go  -configfile ./config/config_local.json
+	go run ./cmd/main.go  -configFile ./config/config_local.json
 
-build:
+docker-build:
 	docker-compose build exam-app
 
-up:
+docker-up:
 	docker-compose up -d
 
-down:
+docker-up-db:
+	docker-compose up -d db
+
+docker-logs:
+	docker-compose -f logs exam-app 
+
+docker-down:
 	docker-compose down --remove-orphans
 
 test:
