@@ -1,12 +1,12 @@
 package handler
 
 import (
-	"database/sql"
 	"encoding/json"
-	"log"
 	"net/http"
 
+	"github.com/lib/pq"
 	exam "github.com/morzik45/test-go"
+	"github.com/morzik45/test-go/logger"
 )
 
 func (h *Handler) signUp(w http.ResponseWriter, r *http.Request) {
@@ -19,6 +19,7 @@ func (h *Handler) signUp(w http.ResponseWriter, r *http.Request) {
 		decoder := json.NewDecoder(r.Body)
 		err := decoder.Decode(&user)
 		if err != nil {
+			logger.ERROR.Printf("Singup without username or password: %s", err.Error())
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -29,15 +30,18 @@ func (h *Handler) signUp(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	log.Printf("SingUp user %s with password %s", user.Username, user.Password)
-
 	_, err := h.services.Authorization.CreateUser(user)
 	if err != nil {
-		log.Printf("Faild on create user: %s", err.Error())
+		pqe, ok := err.(*pq.Error)
+		if ok && string(pqe.Code) == "23505" {
+			logger.INFO.Printf("Try create user with username %s, but username already exist", user.Username)
+		} else {
+			logger.ERROR.Printf("Faild on create user: %s", err.Error())
+		}
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
+	logger.INFO.Printf("SingUp user %s", user.Username)
 	w.WriteHeader(http.StatusCreated)
 }
 
@@ -51,6 +55,7 @@ func (h *Handler) signIn(w http.ResponseWriter, r *http.Request) {
 		decoder := json.NewDecoder(r.Body)
 		err := decoder.Decode(&user)
 		if err != nil {
+			logger.ERROR.Printf("Singin without username or password: %s", err.Error())
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -63,6 +68,7 @@ func (h *Handler) signIn(w http.ResponseWriter, r *http.Request) {
 
 	token, err := h.services.Authorization.GenerateToken(user.Username, user.Password)
 	if err != nil {
+		logger.ERROR.Printf("Faild on login user: %s", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -72,29 +78,15 @@ func (h *Handler) signIn(w http.ResponseWriter, r *http.Request) {
 		Value:    token,
 		HttpOnly: true,
 	})
+	logger.INFO.Printf("SingIn user %s", user.Username)
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-func (h *Handler) singOut(w http.ResponseWriter, r *http.Request) {
-	session, err := h.userIdentity(r)
-	if err == http.ErrNoCookie || err == sql.ErrNoRows {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	} else if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		log.Printf("Error in userIdentity: %s", err.Error())
-		return
-	}
-	if !session.IsAuthorized {
-		log.Println(session.IsAuthorized)
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	_, err = h.services.Authorization.SessionClose(session.Username, session.SessionToken) // maybe need use only 'id' from session
+func (h *Handler) singOut(w http.ResponseWriter, r *http.Request, s *exam.Authorization) {
+	_, err := h.services.Authorization.SessionClose(s.Username, s.SessionToken) // maybe need use only 'id' from session
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		log.Printf("Error in sessionClose: %s", err.Error())
+		logger.ERROR.Printf("Error in sessionClose: %s", err.Error())
 		return
 	}
 
@@ -103,6 +95,7 @@ func (h *Handler) singOut(w http.ResponseWriter, r *http.Request) {
 		Value:  "",
 		MaxAge: -1,
 	})
+	logger.INFO.Printf("Session closed by user %s", s.Username)
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
@@ -111,6 +104,5 @@ func (h *Handler) userIdentity(r *http.Request) (*exam.Authorization, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Login with session token: %s", sessionToken.Value)
 	return h.services.Authorization.ParseToken(sessionToken.Value)
 }

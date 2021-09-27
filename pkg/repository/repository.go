@@ -14,12 +14,20 @@ type Authorization interface {
 	ParseToken(session_token string) (*exam.Authorization, error)
 }
 
+type Testing interface {
+	StartTest(userId, variantId int) (int, error)
+	GetAllVariants() ([]exam.Variant, error)
+	GetTaskById(variantId, taskId int) (exam.Task, error)
+}
+
 type Repository struct {
 	Authorization
+	Testing
 }
 
 func NewRepository(db *sql.DB) *Repository {
 	return &Repository{
 		Authorization: NewAuthPostgres(db),
+		Testing:       NewTaskPostgres(db),
 	}
 }

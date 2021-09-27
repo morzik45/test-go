@@ -12,12 +12,18 @@ type Authorization interface {
 	ParseToken(session_token string) (*exam.Authorization, error)
 }
 
+type Testing interface {
+	GetAllVariants() ([]exam.Variant, error)
+}
+
 type Service struct {
 	Authorization
+	Testing
 }
 
 func NewService(repos *repository.Repository) *Service {
 	return &Service{
 		Authorization: NewAuthService(repos.Authorization),
+		Testing:       NewTasksService(repos.Testing),
 	}
 }
