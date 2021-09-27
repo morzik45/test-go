@@ -3,6 +3,8 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"path"
+	"text/template"
 
 	"github.com/lib/pq"
 	exam "github.com/morzik45/test-go"
@@ -79,7 +81,7 @@ func (h *Handler) signIn(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 	logger.INFO.Printf("SingIn user %s", user.Username)
-	http.Redirect(w, r, "/", http.StatusFound)
+	http.Redirect(w, r, "/test", http.StatusFound)
 }
 
 func (h *Handler) singOut(w http.ResponseWriter, r *http.Request, s *exam.Authorization) {
@@ -105,4 +107,21 @@ func (h *Handler) userIdentity(r *http.Request) (*exam.Authorization, error) {
 		return nil, err
 	}
 	return h.services.Authorization.ParseToken(sessionToken.Value)
+}
+
+func renderLoginForm(w http.ResponseWriter) {
+	fp := path.Join("static", "login.html")
+	tmpl, err := template.ParseFiles(fp)
+	if err != nil {
+		logger.ERROR.Printf("Error on render login form template: %s", err.Error())
+
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := tmpl.Execute(w, ""); err != nil {
+		logger.ERROR.Printf("Error on render login form template: %s", err.Error())
+
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }

@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"net/http"
+	"runtime"
 	"time"
 
 	"github.com/morzik45/test-go/logger"
@@ -19,8 +20,11 @@ func NewHandler(services *service.Service) *Handler {
 
 func (h *Handler) InitRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", h.root)
+	mux.HandleFunc("/", panicRecovery(h.root))
+	mux.HandleFunc("/test", panicRecovery(h.testPage))
 	mux.HandleFunc("/add", h.signUp) // FIXME: not in task, for dev. dont forget to delete
+	fs := http.FileServer(http.Dir("./static"))
+	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 	return mux
 }
 
@@ -29,6 +33,9 @@ func (h *Handler) root(w http.ResponseWriter, r *http.Request) {
 	if err == http.ErrNoCookie || err == sql.ErrNoRows {
 		if r.Method == "POST" {
 			h.signIn(w, r)
+			return
+		} else if r.Method == "GET" {
+			renderLoginForm(w)
 			return
 		} else {
 			logger.ERROR.Printf("Invalid session token: %s", err.Error())
@@ -45,6 +52,9 @@ func (h *Handler) root(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			h.signIn(w, r)
 			return
+		} else if r.Method == "GET" {
+			renderLoginForm(w)
+			return
 		} else {
 			http.Error(w, "Session is closed, relogin is required!", http.StatusUnauthorized)
 			return
@@ -59,4 +69,21 @@ func (h *Handler) root(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+}
+
+func panicRecovery(h func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				buf := make([]byte, 2048)
+				n := runtime.Stack(buf, false)
+				buf = buf[:n]
+
+				logger.ERROR.Printf("recovering from err %v\n %s", err, buf)
+				w.Write([]byte(`{"error":"our server got panic"}`))
+			}
+		}()
+
+		h(w, r)
+	}
 }
