@@ -1,15 +1,21 @@
 <html>
 
 <head>
-    <title></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-F3w7mX95PdgyTmZZMECAngseQB83DfGTowi0iMjiWaeVhAn4FJkqJByhZMI3AhiU" crossorigin="anonymous">
+
+    <title>SingIn</title>
 </head>
 
 <body>
-    <form action="/" method="post">
-        Username:<input type="text" name="username">
-        Password:<input type="password" name="password">
-        <input type="submit" value="Войти">
-    </form>
+    <div class="card">
+        <div class="card-body">
+            <form action="/api" method="post">
+                Username:<input type="text" name="username">
+                Password:<input type="password" name="password">
+                <input type="submit" value="Войти">
+            </form>
+        </div>
+    </div>
 </body>
 
 </html>

@@ -3,19 +3,30 @@ var app = new Vue({
   data() {
     return {
       listVariants: {},
+      showList: true,
+      current_variant_id = "",
+      current_task_id = "",
     };
   },
   mounted() {
     this.getListVariants();
   },
   methods: {
+    singout() {
+      axios
+        .put("/api")
+        .then((response) => {
+          window.location.href = '/'
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
     getListVariants() {
       axios
-        .get("/")
+        .get("/api")
         .then((response) => {
-          console.log(this.listVariants);
-          this.listVariants = response.data;
-          console.log(this.listVariants);
+          this.listVariants = response.data.variants;
         })
         .catch((error) => {
           console.log(error);
@@ -23,15 +34,14 @@ var app = new Vue({
     },
     getTask(variant_id, task_id) {
       axios
-        .get("/", {
+        .get("/api", {
           params: {
-            variant: variant_id,
-            task: task_id,
+            variant_id: variant_id,
+            task_id: task_id,
           },
         })
-        .then(function (response) {
+        .then((response) => {
           console.log(response.data);
-          this.message = response.data;
         })
         .catch(function (error) {
           console.log(error);

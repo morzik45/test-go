@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"path"
@@ -9,6 +10,7 @@ import (
 	"github.com/lib/pq"
 	exam "github.com/morzik45/test-go"
 	"github.com/morzik45/test-go/logger"
+	"github.com/morzik45/test-go/pkg/service"
 )
 
 func (h *Handler) signUp(w http.ResponseWriter, r *http.Request) {
@@ -81,32 +83,41 @@ func (h *Handler) signIn(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 	logger.INFO.Printf("SingIn user %s", user.Username)
-	http.Redirect(w, r, "/test", http.StatusFound)
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-func (h *Handler) singOut(w http.ResponseWriter, r *http.Request, s *exam.Authorization) {
-	_, err := h.services.Authorization.SessionClose(s.Username, s.SessionToken) // maybe need use only 'id' from session
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		logger.ERROR.Printf("Error in sessionClose: %s", err.Error())
-		return
+func (h *Handler) singOut(w http.ResponseWriter, r *http.Request) {
+	session, ok := r.Context().Value("Session").(*exam.Authorization)
+	if ok && session.IsAuthorized {
+		_, err := h.services.Authorization.SessionClose(session.Username, session.SessionToken) // maybe need use only 'id' from session
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			logger.ERROR.Printf("Error in sessionClose: %s", err.Error())
+			return
+		}
 	}
-
 	http.SetCookie(w, &http.Cookie{
 		Name:   "session_token",
 		Value:  "",
 		MaxAge: -1,
 	})
-	logger.INFO.Printf("Session closed by user %s", s.Username)
-	http.Redirect(w, r, "/", http.StatusFound)
+	// http.Redirect(w, r, "/", http.StatusFound)
 }
 
-func (h *Handler) userIdentity(r *http.Request) (*exam.Authorization, error) {
-	sessionToken, err := r.Cookie("session_token")
-	if err != nil {
-		return nil, err
-	}
-	return h.services.Authorization.ParseToken(sessionToken.Value)
+func authContext(s *service.Service, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger.INFO.Println(r.Method, "-", r.RequestURI)
+		sessionToken, _ := r.Cookie("session_token")
+		if sessionToken != nil {
+			session, err := s.Authorization.ParseToken(sessionToken.Value)
+			if err == nil {
+				ctx := context.WithValue(r.Context(), "Session", session)
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func renderLoginForm(w http.ResponseWriter) {

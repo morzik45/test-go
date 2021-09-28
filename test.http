@@ -3,29 +3,29 @@ content-type: application/json
 # @name SingUp
 
 {
-    "username": "morzik",
-    "password": "123456"
+    "username": "test",
+    "password": "123"
 }
 
 ###
-POST http://localhost:8000 HTTP/1.1
+POST http://localhost:8000/api HTTP/1.1
 content-type: application/json
 # @name SingIn
 
 {
-    "username": "morzik",
-    "password": "123456"
+    "username": "test",
+    "password": "123"
 }
 
 ###
-PUT http://localhost:8000 HTTP/1.1
+PUT http://localhost:8000/api HTTP/1.1
 content-type: application/json
 # @name SingOut
 
 {}
 
 ###
-GET http://localhost:8000 HTTP/1.1
+GET http://localhost:8000/api HTTP/1.1
 content-type: application/json
 # @name GetAll
 

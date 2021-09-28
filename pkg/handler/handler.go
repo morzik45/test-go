@@ -1,11 +1,10 @@
 package handler
 
 import (
-	"database/sql"
 	"net/http"
 	"runtime"
-	"time"
 
+	exam "github.com/morzik45/test-go"
 	"github.com/morzik45/test-go/logger"
 	"github.com/morzik45/test-go/pkg/service"
 )
@@ -18,57 +17,53 @@ func NewHandler(services *service.Service) *Handler {
 	return &Handler{services: services}
 }
 
-func (h *Handler) InitRoutes() *http.ServeMux {
+func (h *Handler) InitRoutes() http.Handler {
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", panicRecovery(h.root))
-	mux.HandleFunc("/test", panicRecovery(h.testPage))
+	mux.HandleFunc("/api", panicRecovery(h.api))
 	mux.HandleFunc("/add", h.signUp) // FIXME: not in task, for dev. dont forget to delete
 	fs := http.FileServer(http.Dir("./static"))
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
-	return mux
+	muxWithAuth := authContext(h.services, mux)
+	return muxWithAuth
 }
 
 func (h *Handler) root(w http.ResponseWriter, r *http.Request) {
-	session, err := h.userIdentity(r)
-	if err == http.ErrNoCookie || err == sql.ErrNoRows {
-		if r.Method == "POST" {
-			h.signIn(w, r)
-			return
-		} else if r.Method == "GET" {
-			renderLoginForm(w)
-			return
-		} else {
-			logger.ERROR.Printf("Invalid session token: %s", err.Error())
-			http.Error(w, "Authorization is required!", http.StatusUnauthorized)
-			return
-		}
-	} else if err != nil {
-		logger.ERROR.Printf("Error on user identity: %s", err.Error())
-		http.Error(w, "Error on user identity", http.StatusInternalServerError)
-		return
-	}
-	if !session.IsAuthorized {
-		logger.INFO.Printf("Request from user '%s', but session closed at %s, try login", session.Username, session.LogoutAt.Time.Format(time.RFC3339))
-		if r.Method == "POST" {
-			h.signIn(w, r)
-			return
-		} else if r.Method == "GET" {
-			renderLoginForm(w)
-			return
-		} else {
-			http.Error(w, "Session is closed, relogin is required!", http.StatusUnauthorized)
-			return
-		}
-	}
-	if r.Method == "PUT" {
-		h.singOut(w, r, session)
-		return
-	}
 	if r.Method == "GET" {
-		h.getAllVariants(w, r, session)
+		sessionRaw := r.Context().Value("Session")
+		session, ok := sessionRaw.(*exam.Authorization)
+		if ok && session.IsAuthorized {
+			renderTestPage(w, r, session)
+		} else {
+			renderLoginForm(w)
+		}
+	}
+}
+
+func (h *Handler) api(w http.ResponseWriter, r *http.Request) {
+	session, ok := r.Context().Value("Session").(*exam.Authorization)
+
+	if r.Method == "POST" && (!ok || !session.IsAuthorized) {
+		h.signIn(w, r)
 		return
 	}
 
+	if r.Method == "PUT" {
+		h.singOut(w, r)
+		return
+	}
+
+	if r.Method == "GET" {
+		if ok && session.IsAuthorized {
+			h.getTasksHandler(w, r)
+			return
+		} else {
+			logger.ERROR.Println("Unauthorized access attempt")
+			http.Error(w, "Authorization is required!", http.StatusUnauthorized)
+			return
+		}
+	}
 }
 
 func panicRecovery(h func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
