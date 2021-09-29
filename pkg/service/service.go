@@ -14,7 +14,8 @@ type Authorization interface {
 
 type Testing interface {
 	GetAllVariants() ([]exam.Variant, error)
-	GetTaskById(variantId, taskId int) (exam.Task, error)
+	GetTaskById(variantId, taskId int, username string) (exam.Task, error)
+	SaveAnswer(answer exam.Answer, username string) (bool, int, error)
 }
 
 type Service struct {

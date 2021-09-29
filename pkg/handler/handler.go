@@ -44,9 +44,15 @@ func (h *Handler) root(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) api(w http.ResponseWriter, r *http.Request) {
 	session, ok := r.Context().Value("Session").(*exam.Authorization)
 
-	if r.Method == "POST" && (!ok || !session.IsAuthorized) {
-		h.signIn(w, r)
-		return
+	if r.Method == "POST" {
+		if !ok || !session.IsAuthorized {
+			h.signIn(w, r)
+			return
+		} else {
+			h.saveAnswer(w, r)
+			return
+		}
+
 	}
 
 	if r.Method == "PUT" {

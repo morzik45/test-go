@@ -4,8 +4,13 @@ var app = new Vue({
     return {
       listVariants: {},
       showList: true,
-      current_variant_id = "",
-      current_task_id = "",
+      is_finished: false,
+      current_variant_id: "",
+      current_task_id: "",
+      current_test_id: "",
+      current_question: "",
+      current_answers: [],
+      current_percent: "",
     };
   },
   mounted() {
@@ -32,7 +37,27 @@ var app = new Vue({
           console.log(error);
         });
     },
-    getTask(variant_id, task_id) {
+    sendAnswer(id) {
+      params = {
+        variant_id: this.current_variant_id,
+        task_id: this.current_task_id,
+        test_id: this.current_test_id,
+        answer: Number(id)
+      }
+      console.log(params)
+      axios.post("/api", params)
+      .then((response) => {
+        if (response.data.status === "ok") {
+          this.get_task_by_id(this.current_variant_id, this.current_task_id+1)
+        } else if (response.data.status === "finished") {
+          this.current_percent = response.data.percent
+          this.is_finished = true
+        }
+      }).catch(function (error) {
+        console.log(error);
+      });
+    },
+    get_task_by_id(variant_id, task_id) {
       axios
         .get("/api", {
           params: {
@@ -41,7 +66,13 @@ var app = new Vue({
           },
         })
         .then((response) => {
-          console.log(response.data);
+          console.log(response.data.question)
+          this.current_task_id = response.data.question.id
+          this.current_variant_id = response.data.question.variant_id
+          this.current_test_id = response.data.question.test_id
+          this.current_question = response.data.question.question
+          this.current_answers = response.data.question.answers
+          this.showList = false
         })
         .catch(function (error) {
           console.log(error);

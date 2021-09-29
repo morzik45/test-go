@@ -30,3 +30,10 @@ content-type: application/json
 # @name GetAll
 
 {}
+
+###
+GET http://localhost:8000/api?variant_id=2&task_id=1 HTTP/1.1
+content-type: application/json
+# @name GetTask
+
+{}

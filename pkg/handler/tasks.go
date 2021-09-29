@@ -30,6 +30,43 @@ func renderTestPage(w http.ResponseWriter, r *http.Request, session *exam.Author
 	}
 }
 
+func (h *Handler) saveAnswer(w http.ResponseWriter, r *http.Request) {
+	session, _ := r.Context().Value("Session").(*exam.Authorization)
+	response := make(map[string]interface{})
+	var data exam.Answer
+
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&data)
+	if err != nil {
+		logger.ERROR.Printf("Error in answer params: %s", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	logger.INFO.Printf("User '%s' try save answer: variant: %d, task: %d, answer: %d, test: %d", session.Username, data.VariantID, data.TaskID, data.AnswerID, data.TestID)
+
+	finished, percent, err := h.services.Testing.SaveAnswer(data, session.Username)
+	if err != nil {
+		logger.ERROR.Printf("Save answer return error: %s", err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if finished {
+		response["percent"] = percent
+		response["status"] = "finished"
+	} else {
+		response["status"] = "ok"
+	}
+	js, err := json.Marshal(response)
+	if err != nil {
+		logger.ERROR.Printf("Error in marshaling all variants: %s", err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
 func (h *Handler) getTasksHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := r.Context().Value("Session").(*exam.Authorization)
 	variantIDstr := r.URL.Query().Get("variant_id")
@@ -53,21 +90,26 @@ func (h *Handler) getTasksHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid variant_id or task_id.", http.StatusInternalServerError)
 			return
 		}
-		task, err := h.services.Testing.GetTaskById(variantID, taskID)
+		task, err := h.services.Testing.GetTaskById(variantID, taskID, session.Username)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				logger.ERROR.Printf("User '%s' request not exist question with variantID: '%s' and taskID: '%s'", session.Username, variantIDstr, taskIDstr)
 				http.Error(w, "The question you asked does not exist.", http.StatusInternalServerError)
 				return
 			} else {
-				logger.ERROR.Printf("Unknown error in request variantID '%s' and taskID: '%s' from DB", variantIDstr, taskIDstr)
+				logger.ERROR.Printf("Unknown error in request variantID '%s' and taskID: '%s' from DB, %s", variantIDstr, taskIDstr, err.Error())
 				http.Error(w, fmt.Sprintf("Unknown error in request variantID '%s' and taskID: '%s' from DB", variantIDstr, taskIDstr), http.StatusInternalServerError)
 				return
 			}
 		} else {
-			answerStr := r.URL.Query().Get("answer")
-			answer, errA := strconv.Atoi(answerStr)
-			// TODO:
+			response["question"] = map[string]interface{}{
+				"id":         task.Id,
+				"variant_id": task.VariantID,
+				"test_id":    task.TestID,
+				"question":   task.Question,
+				"answers":    task.Answers,
+			}
+			logger.INFO.Printf("User '%s' request question with variantID: '%s' and taskID: '%s'", session.Username, variantIDstr, taskIDstr)
 		}
 	}
 	js, err := json.Marshal(response)

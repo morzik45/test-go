@@ -8,16 +8,19 @@ type Variant struct {
 }
 
 type Answer struct {
-	Id   int    `json:"id"`
-	Text string `json:"string"`
+	VariantID int `json:"variant_id"`
+	TaskID    int `json:"task_id"`
+	TestID    int `json:"test_id"`
+	AnswerID  int `json:"answer"`
 }
 
 type Task struct {
-	Id        int      `json:"id"`
-	VariantID int      `json:"variant_id"`
-	Question  string   `json:"question"`
-	Correct   int      `json:"correct"`
-	Answers   []Answer `json:"answers"`
+	Id        int            `json:"id"`
+	VariantID int            `json:"variant_id"`
+	TestID    int            `json:"test_id"`
+	Question  string         `json:"question"`
+	Correct   int            `json:"correct"`
+	Answers   map[int]string `json:"answers"`
 }
 
 type Test struct {

@@ -16,11 +16,28 @@
           <button v-on:click="singout" type="button" class="btn btn-outline-dark">Выйти</button>
         </form>
       </nav>
-      <div class="card">
-        <div id="list" v-if="showList" class="list-group list-group-flush">
-          <a href="#" class="list-group-item list-group-item-action" v-for="variant in listVariants" :key="variant.id">{{ variant.name }}</a>  
+      <div class="card text-center" v-if="showList && !is_finished">
+        <div id="list"  class="list-group list-group-flush">
+          <a href="#" v-on:click="get_task_by_id(variant.id, 1)" class="list-group-item list-group-item-action" v-for="variant in listVariants" :key="variant.id">{{ variant.name }}</a>  
         </div>
-        
+      </div>
+
+    <div class="card text-center" v-if="!showList && !is_finished">
+      <div class="card-header">
+        <h5 class="card-title">{{current_question}}</h5>
+      </div>
+      <div class="card-body">
+        <div id="answers"  class="list-group list-group-rou">
+          <a href="#" v-on:click="sendAnswer(answer[0])" class="list-group-item list-group-item-action" v-for="answer in Object.entries(current_answers)">{{ answer[1] }}</a>  
+        </div>
+      </div>
+    </div>
+    
+    <div class="card text-center" v-if="is_finished">
+      <div class="card-header">
+        Результат: {{current_percent}} %
+      </div>
+    </div>
       </body>
       <script src="static/test.js"></script>
 </html>

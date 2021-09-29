@@ -14,7 +14,7 @@ const (
 	testsTable          = "tests"
 	tasksTable          = "tasks"
 	userAnswersTable    = "user_answers"
-	ResultsTable        = "results"
+	resultsTable        = "results"
 )
 
 type Config struct {
