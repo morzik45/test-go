@@ -60,7 +60,7 @@ func (h *Handler) signIn(w http.ResponseWriter, r *http.Request) {
 		err := decoder.Decode(&user)
 		if err != nil {
 			logger.ERROR.Printf("Singin without username or password: %s", err.Error())
-			w.WriteHeader(http.StatusUnauthorized)
+			http.Error(w, "Incorrect login or password", http.StatusUnauthorized)
 			return
 		}
 	} else {
@@ -73,7 +73,7 @@ func (h *Handler) signIn(w http.ResponseWriter, r *http.Request) {
 	token, err := h.services.Authorization.GenerateToken(user.Username, user.Password)
 	if err != nil {
 		logger.ERROR.Printf("Faild on login user: %s", err.Error())
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "Incorrect login or password", http.StatusUnauthorized)
 		return
 	}
 

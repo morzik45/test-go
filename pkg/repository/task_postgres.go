@@ -5,16 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 
 	exam "github.com/morzik45/test-go"
 )
 
 type TaskPostgres struct {
-	db *sql.DB
+	db             *sql.DB
+	saveAnswerLock *sync.Mutex
 }
 
-func NewTaskPostgres(db *sql.DB) *TaskPostgres {
-	return &TaskPostgres{db: db}
+func NewTaskPostgres(db *sql.DB, saveAnswerLock *sync.Mutex) *TaskPostgres {
+	return &TaskPostgres{db: db, saveAnswerLock: saveAnswerLock}
 }
 
 func (r *TaskPostgres) GetTaskById(variantId, taskId int, username string) (exam.Task, error) {
@@ -71,6 +73,9 @@ func (r *TaskPostgres) GetTaskById(variantId, taskId int, username string) (exam
 }
 
 func (r *TaskPostgres) SaveAnswer(answer exam.Answer, username string) (bool, int, error) {
+	r.saveAnswerLock.Lock()
+	defer r.saveAnswerLock.Unlock()
+
 	var finished bool
 	checkQuery := fmt.Sprintf(`
 			SELECT q.id AS q_id,
@@ -101,13 +106,13 @@ func (r *TaskPostgres) SaveAnswer(answer exam.Answer, username string) (bool, in
 		return finished, 0, err
 	}
 	if !t_id.Valid || !u_id.Valid {
-		return finished, 0, errors.New(fmt.Sprintf("User '%s' not started test with id '%d'", username, answer.TestID))
+		return finished, 0, errors.New("requested test not started")
 	}
 	if r_id.Valid {
-		return finished, 0, errors.New(fmt.Sprintf("User '%s' already finished test with id '%d'", username, answer.TestID))
+		return finished, 0, errors.New("test already finished")
 	}
 	if a_id.Valid {
-		return finished, 0, errors.New(fmt.Sprintf("User '%s' already answered on this question", username))
+		return finished, 0, errors.New("question already answered")
 	}
 	r.db.QueryRow(fmt.Sprintf("INSERT INTO %s (test_id, task_id, answer) VALUES ($1, $2, $3)", userAnswersTable), t_id, q_id, answer.AnswerID)
 

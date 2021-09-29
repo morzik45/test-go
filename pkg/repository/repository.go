@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"sync"
 
 	exam "github.com/morzik45/test-go"
 )
@@ -27,8 +28,9 @@ type Repository struct {
 }
 
 func NewRepository(db *sql.DB) *Repository {
+	var saveAnswerLock sync.Mutex
 	return &Repository{
 		Authorization: NewAuthPostgres(db),
-		Testing:       NewTaskPostgres(db),
+		Testing:       NewTaskPostgres(db, &saveAnswerLock),
 	}
 }

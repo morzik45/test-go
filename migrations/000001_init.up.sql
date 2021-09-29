@@ -36,7 +36,7 @@ CREATE TABLE user_answers (
 );
 CREATE TABLE results (
     id SERIAL NOT NULL PRIMARY KEY,
-    test_id INT REFERENCES tests (id) ON DELETE CASCADE NOT NULL,
+    test_id INT REFERENCES tests (id) ON DELETE CASCADE UNIQUE NOT NULL,
     percent INT
 );
 INSERT INTO variants (name)
