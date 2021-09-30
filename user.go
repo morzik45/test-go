@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type User struct {
+type User struct { // разрешалось добавить
 	Id       int    `json:"-"`
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -13,7 +13,7 @@ type User struct {
 
 type Authorization struct {
 	Id           int          `json:"-"`
-	Username     string       `json:"username"`
+	Username     string       `json:"username"` // напрашивается user.id, но в задании указан именно varchar
 	IsAuthorized bool         `json:"is_authorized"`
 	LoginAt      time.Time    `json:"login_at"`
 	LogoutAt     sql.NullTime `json:"logout_at"`
