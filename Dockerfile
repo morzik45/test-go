@@ -1,19 +1,18 @@
-FROM golang:1.17-buster
+FROM golang:1.17-buster AS build
 
-RUN go version
 ENV GOPATH=/
+WORKDIR /src/
+COPY ./ /src/
 
-COPY ./ ./
+RUN go mod download; CGO_ENABLED=0 go build -o /exam-app ./cmd/main.go
 
-# install psql
-RUN apt-get update
-RUN apt-get -y install postgresql-client
+FROM alpine:latest
 
-# make wait-for-postgres.sh executable
-RUN chmod +x ./wait-for-postgres.sh
+COPY --from=build /exam-app /exam-app
+COPY ./config/config.json /config/
+COPY ./static/ /static/
+COPY ./wait-for-postgres.sh ./
 
-# build go app
-RUN go mod download
-RUN go build -o exam-app ./cmd/main.go
+RUN apk --no-cache add postgresql-client util-linux && chmod +x ./wait-for-postgres.sh && mkdir /log
 
 CMD ["./exam-app"]

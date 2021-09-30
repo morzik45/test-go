@@ -11,7 +11,7 @@ docker-up-db:
 	docker-compose up -d db
 
 docker-logs:
-	docker-compose -f logs exam-app 
+	docker-compose logs -f exam-app 
 
 docker-down:
 	docker-compose down --remove-orphans
